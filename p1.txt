@@ -1,0 +1,20 @@
+import re
+import pandas as pd
+from nltk.stem import PorterStemmer, WordNetLemmatizer
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+
+
+text = "The students are studying information retrieval and searching documents."
+tokens = re.findall(r"[a-z]+", text.lower())
+filtered_tokens = pd.Series(tokens).loc[
+    lambda words: ~words.isin(ENGLISH_STOP_WORDS)
+]
+stemmed_tokens = filtered_tokens.map(PorterStemmer().stem)
+lemmatized_tokens = filtered_tokens.map(
+    lambda word: WordNetLemmatizer().lemmatize(word, pos="v")
+)
+
+print("Tokens:", tokens)
+print("After stop-word removal:", filtered_tokens.tolist())
+print("Stemmed:", stemmed_tokens.tolist())
+print("Lemmatized:", lemmatized_tokens.tolist())
