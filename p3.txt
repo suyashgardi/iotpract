@@ -1,0 +1,35 @@
+from pathlib import Path
+import networkx as nx
+import pandas as pd
+
+df = pd.read_csv(Path(__file__).with_name("heart.csv"))
+df["high_cholesterol"] = df["chol"] >= 240
+df["heart_disease"] = (df["num"] > 0).astype(int)
+
+network = nx.DiGraph([
+    ("cp", "heart_disease"),
+    ("high_cholesterol", "heart_disease"),
+])
+
+p_cp = df["cp"].value_counts(normalize=True)
+p_chol = df["high_cholesterol"].value_counts(normalize=True)
+cpt = pd.crosstab(
+    [df["cp"], df["high_cholesterol"]],
+    df["heart_disease"],
+    normalize="index",
+)
+counts = df.groupby(["cp", "high_cholesterol"]).size()
+
+evidence = (4, True)
+probability = cpt.loc[evidence, 1]
+sample_count = counts.loc[evidence]
+
+print("Dataset records:", len(df))
+print("Network edges:", list(network.edges))
+print("P(cp):\n", p_cp)
+print("P(high_cholesterol):\n", p_chol)
+print("Conditional probability table:\n", cpt)
+print(
+    f"P(disease | cp=4, high cholesterol) = "
+    f"{probability:.3f} (n={sample_count})"
+)
