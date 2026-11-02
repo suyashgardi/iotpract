@@ -1,0 +1,51 @@
+import re
+from pathlib import Path
+import pandas as pd
+from nltk.stem import PorterStemmer
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS, TfidfVectorizer
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+
+dataset = pd.read_csv("sms_spam.csv")
+messages = dataset["message"]
+labels = dataset["label"]
+
+
+train_messages, test_messages, train_labels, test_labels = train_test_split(
+    messages,
+    labels,
+    test_size=0.2,
+    random_state=42,
+    stratify=labels,
+)
+
+stemmer = PorterStemmer()
+
+def tokenize_and_stem(message):
+    words = pd.Series(re.findall(r"[a-zA-Z]+", message.lower()))
+    words = words.loc[~words.isin(ENGLISH_STOP_WORDS)]
+    return words.map(stemmer.stem).tolist()
+
+vectorizer = TfidfVectorizer(tokenizer=tokenize_and_stem, token_pattern=None)
+train_features = vectorizer.fit_transform(train_messages)
+test_features = vectorizer.transform(test_messages)
+
+model = MultinomialNB().fit(train_features, train_labels)
+predicted_labels = model.predict(test_features)
+
+confusion = pd.DataFrame(
+    confusion_matrix(test_labels, predicted_labels, labels=["ham", "spam"]),
+    index=["Actual ham", "Actual spam"],
+    columns=["Predicted ham", "Predicted spam"],
+)
+
+sample_message = "Congratulations, you have won a free prize"
+sample_prediction = model.predict(vectorizer.transform([sample_message]))[0]
+
+print(f"TF-IDF training matrix shape: {train_features.shape}")
+print(f"accuracy: {accuracy_score(test_labels, predicted_labels):.3f}")
+print("confusion matrix:\n", confusion)
+print("classsification report:\n",
+      classification_report(test_labels, predicted_labels, zero_division=0))
+print("Sample message prediction:", sample_prediction)
