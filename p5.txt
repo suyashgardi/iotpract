@@ -1,0 +1,37 @@
+import networkx as nx
+import pandas as pd
+from bs4 import BeautifulSoup
+
+pages = {
+    "A": '<a href="B">B</a><a href="C">C</a>',
+    "B": '<a href="C">C</a>',
+    "C": '<a href="A">A</a>',
+}
+
+edges = []
+for source, html in pages.items():
+    soup = BeautifulSoup(html, "html.parser")
+    for anchor in soup.find_all("a", href=True):
+        edges.append((source, anchor["href"]))
+
+page_names = list(pages)
+page_graph = nx.DiGraph()
+page_graph.add_nodes_from(page_names)
+page_graph.add_edges_from(edges)
+
+adjacency_matrix = pd.DataFrame(
+    nx.to_numpy_array(page_graph, nodelist=page_names, dtype=int),
+    index=page_names,
+    columns=page_names,
+)
+
+pagerank = nx.pagerank(page_graph, alpha=0.85)
+ranking = pd.DataFrame({
+    "inbound_links": dict(page_graph.in_degree()),
+    "pagerank": pagerank,
+}).sort_values("pagerank", ascending=False)
+
+print("Extracted links:", edges)
+print("Adjacency matrix :\n", adjacency_matrix)
+print("Page ranking:\n", ranking)
+print("Sum of PageRank values:", ranking["pagerank"].sum())
